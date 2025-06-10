@@ -1,4 +1,4 @@
-#include <raylib.h>
+#include <raylib.h>//ДЛЯ ЗАПУСКА  g++ -std=c++11 ~/labs/laba7/task1.cpp -o ~/labs/TEST/cantor -lraylib
 #include <iostream>
 
 using namespace std;
