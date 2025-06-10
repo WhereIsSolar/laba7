@@ -4,125 +4,137 @@
 #include <unordered_map>
 using namespace std;
 
-// Structure to store prefix information
+// Структура для хранения информации о префиксах
 struct PrefixInfo {
-    int total_count;    // Number of words starting with this prefix
-    vector<int> indices; // Indices of words with this prefix
+    int total_count;    // Количество слов, начинающихся с этого префикса
+    vector<int> indices; // Индексы слов с этим префиксом
 };
 
-vector<string> linearCrossword(const vector<string>& words) {
-    if (words.empty()) {
-        return {}; // Cannot build a chain with no words
+// Рекурсивная функция для построения цепочки слов
+void buildChain(const vector<string>& words, 
+               const unordered_map<string, PrefixInfo>& prefixMap, 
+               vector<string>& current_chain, 
+               vector<bool>& used, 
+               vector<string>& best_chain) {
+    string last_word = current_chain.back(); // Последнее слово в текущей цепочке
+    int L = last_word.length(); // Длина последнего слова
+    bool found = false; // Флаг, найдено ли продолжение цепочки
+
+    // Проверяем все возможные суффиксы последнего слова
+    for (int k = 2; k <= L; k++) {
+        string suffix = last_word.substr(L - k, k); // Извлекаем суффикс длиной k
+        cout << "Проверка суффикса '" << suffix << "' слова '" << last_word << "'" << endl;
+
+        auto it = prefixMap.find(suffix); // Ищем суффикс среди префиксов
+        if (it != prefixMap.end()) {
+            // Проверяем все слова с подходящим префиксом
+            for (int idx : it->second.indices) {
+                if (!used[idx]) { // Если слово ещё не использовано
+                    // Добавляем слово в цепочку
+                    current_chain.push_back(words[idx]);
+                    used[idx] = true; // Отмечаем слово как использованное
+                    found = true;
+                    cout << "Добавлено слово '" << words[idx] << "' в цепочку" << endl;
+
+                    // Рекурсивно продолжаем строить цепочку
+                    buildChain(words, prefixMap, current_chain, used, best_chain);
+
+                    // Откат (backtracking): убираем слово и снимаем отметку
+                    current_chain.pop_back();
+                    used[idx] = false;
+                }
+            }
+        }
     }
 
-    // 1. PREFIX INDEXING
-    unordered_map<string, PrefixInfo> prefixMap;
+    if (!found) {
+        cout << "Продолжение для слова '" << last_word << "' не найдено" << endl;
+    }
+
+    // Обновляем лучшую цепочку, если текущая длиннее и содержит хотя бы 2 слова
+    if (current_chain.size() >= 2 && current_chain.size() > best_chain.size()) {
+        best_chain = current_chain;
+    }
+}
+
+// Основная функция для построения линейного кроссворда
+vector<string> linearCrossword(const vector<string>& words) {
+    if (words.empty()) {
+        return {}; // Нельзя построить цепочку без слов
+    }
+
+    // 1. ИНДЕКСАЦИЯ ПРЕФИКСОВ
+    unordered_map<string, PrefixInfo> prefixMap; // Словарь для хранения префиксов
 
     for (int idx = 0; idx < words.size(); idx++) {
-        string word = words[idx]; // No case conversion for now
-        int L = word.length();
+        string word = words[idx]; // Текущее слово
+        int L = word.length(); // Длина слова
         if (L < 2) {
-            cout << "Skipping word '" << word << "' (too short)" << endl;
+            cout << "Пропуск слова '" << word << "' (слишком короткое)" << endl;
             continue;
         }
 
-        // Generate all possible prefixes for the current word
+        // Генерируем все возможные префиксы для текущего слова
         for (int k = 2; k <= L; k++) {
-            string prefix = word.substr(0, k);
-            prefixMap[prefix].total_count++;
-            prefixMap[prefix].indices.push_back(idx);
-            cout << "Added prefix '" << prefix << "' for word '" << word << "' (index " << idx << ")" << endl;
+            string prefix = word.substr(0, k); // Извлекаем префикс длиной k
+            prefixMap[prefix].total_count++; // Увеличиваем счётчик префикса
+            prefixMap[prefix].indices.push_back(idx); // Добавляем индекс слова
+            cout << "Добавлен префикс '" << prefix << "' для слова '" << word << "' (индекс " << idx << ")" << endl;
         }
     }
 
-    // 2. CHAIN BUILDING
-    vector<string> result;
-    vector<bool> used(words.size(), false);
-    vector<string> best_chain;
+    // 2. ПОСТРОЕНИЕ ЦЕПОЧКИ
+    vector<string> best_chain; // Хранит самую длинную цепочку
 
-    // Try starting a chain with each word
+    // Пробуем начать цепочку с каждого слова
     for (int start_idx = 0; start_idx < words.size(); start_idx++) {
-        if (words[start_idx].length() < 2) continue;
+        if (words[start_idx].length() < 2) continue; // Пропускаем короткие слова
 
-        result.clear();
-        result.push_back(words[start_idx]);
-        used.assign(words.size(), false);
-        used[start_idx] = true;
+        vector<string> current_chain = {words[start_idx]}; // Начинаем цепочку с текущего слова
+        vector<bool> used(words.size(), false); // Массив для отслеживания использованных слов
+        used[start_idx] = true; // Отмечаем начальное слово как использованное
 
-        cout << "\nTrying to build chain starting with '" << words[start_idx] << "'" << endl;
+        cout << "\nПопытка построить цепочку, начиная со слова '" << words[start_idx] << "'" << endl;
 
-        // Build the chain
-        while (true) {
-            string last_word = result.back();
-            int L = last_word.length();
-            bool found = false;
-
-            // Check all possible suffixes of the last word
-            for (int k = 2; k <= L; k++) {
-                string suffix = last_word.substr(L - k, k);
-                cout << "Checking suffix '" << suffix << "' of word '" << last_word << "'" << endl;
-
-                auto it = prefixMap.find(suffix);
-                if (it != prefixMap.end()) {
-                    // Check all words with the matching prefix
-                    for (int idx : it->second.indices) {
-                        if (!used[idx]) {
-                            result.push_back(words[idx]);
-                            used[idx] = true;
-                            found = true;
-                            cout << "Added word '" << words[idx] << "' to chain" << endl;
-                            break;
-                        }
-                    }
-                    if (found) break;
-                }
-            }
-            if (!found) {
-                cout << "No continuation found for word '" << last_word << "'" << endl;
-                break;
-            }
-        }
-
-        // Save the longest chain found
-        if (result.size() >= 2 && result.size() > best_chain.size()) {
-            best_chain = result;
-        }
+        // Строим цепочку рекурсивно
+        buildChain(words, prefixMap, current_chain, used, best_chain);
     }
 
-    return best_chain; // Return the longest chain found
+    return best_chain; // Возвращаем самую длинную найденную цепочку
 }
 
+// Основная программа
 int main() {
-    cout << "Enter words (empty line to finish):" << endl;
+    cout << "Введите слова (пустая строка для завершения):" << endl;
 
-    vector<string> words;
-    string input;
+    vector<string> words; // Вектор для хранения слов
+    string input; // Переменная для ввода строки
 
-    // Input words from keyboard
+    // Ввод слов с клавиатуры
     while (true) {
         getline(cin, input);
         if (input.empty()) break;
-        words.push_back(input);
+        words.push_back(input); // Добавляем слово в вектор
     }
 
     if (words.empty()) {
-        cout << "No words entered" << endl;
+        cout << "Слова не введены" << endl;
         return 0;
     }
 
-    // Find the chain
+    // Поиск цепочки
     vector<string> result = linearCrossword(words);
 
-    // Output the result
+    // Вывод результата
     if (!result.empty()) {
-        cout << "\nChain found: ";
+        cout << "\nЦепочка найдена: ";
         for (size_t i = 0; i < result.size(); i++) {
             cout << result[i];
             if (i < result.size() - 1) cout << " -> ";
         }
         cout << endl;
     } else {
-        cout << "\nNo chain found" << endl;
+        cout << "\nЦепочка не найдена" << endl;
     }
 
     return 0;

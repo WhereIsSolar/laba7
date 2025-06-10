@@ -1,41 +1,65 @@
+import javax.swing.*;
+import java.awt.*;
 import java.util.Scanner;
 
-public class CantorSet {
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter the number of levels: ");
-        int levels = scanner.nextInt();
-        System.out.println("Cantor set construction for " + levels + " levels:");
-        cantorSet(levels, levels);
-        System.out.println("Construction completed.");
-        scanner.close();
+public class CantorSet extends JFrame {
+
+    private int maxDepth;
+    private final int width = 800;
+    private final int height = 600;
+
+    public CantorSet(int maxDepth) {
+        this.maxDepth = maxDepth;
+        setTitle("Множество Кантора");
+        setSize(width, height);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        getContentPane().setBackground(Color.BLACK);
     }
 
-    public static void cantorSet(int level, int maxLevels) {
-        if (level == 0) return;
-        
-        int segmentLength = (int) Math.pow(3, level - 1);
-        int numSegments = 1 << (maxLevels - level);  // 2^(maxLevels-level)
-        
-        // Вывод отступов
-        for (int i = 0; i < maxLevels - level; i++) {
-            System.out.print("  ");
+    @Override
+    public void paint(Graphics g) {
+        super.paint(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setColor(Color.WHITE);
+        drawCantorSet(g2d, 50, 50, 700, 0);
+        System.out.println("Отрисовка завершена");
+    }
+
+    private void drawCantorSet(Graphics2D g, double x, double y, double length, int depth) {
+        if (depth >= maxDepth) {
+            System.out.println("Достигнута глубина: " + depth);
+            return;
         }
         
-        // Вывод сегментов Кантора
-        for (int s = 0; s < numSegments; s++) {
-            for (int i = 0; i < segmentLength; i++) {
-                System.out.print("-");
-            }
-            if (s < numSegments - 1) {
-                for (int i = 0; i < segmentLength; i++) {
-                    System.out.print(" ");
-                }
-            }
-        }
-        System.out.println();
+        // Отрисовка текущего отрезка
+        g.drawLine((int) x, (int) y, (int) (x + length), (int) y);
+        System.out.printf("Отрисован отрезок: x=%.1f y=%.1f длина=%.1f уровень=%d%n",
+                          x, y, length, depth);
         
-        // Рекурсивный вызов для следующего уровня
-        cantorSet(level - 1, maxLevels);
+        // Вычисление параметров для след. уровня
+        double newLength = length / 3;
+        double newY = y + 50;
+        
+        // Рекурсивный вызов для левой и правой третей
+        drawCantorSet(g, x, newY, newLength, depth + 1);
+        drawCantorSet(g, x + 2 * newLength, newY, newLength, depth + 1);
+    }
+
+    public static void main(String[] args) {
+        System.out.println("Запуск программы для построения множества Кантора");
+        
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Введите макс. глубину рекурсии: ");
+        int depth = scanner.nextInt();
+        scanner.close();
+
+        SwingUtilities.invokeLater(() -> {
+            CantorSet cantor = new CantorSet(depth);
+            cantor.setVisible(true);
+        });
+        
+        System.out.println("Программа завершена");
     }
 }
